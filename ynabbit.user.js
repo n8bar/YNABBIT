@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.2
+// @version      0.0.3
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
@@ -16,6 +16,8 @@
 
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
   const LABEL = 'Still Needed to Fund Plan';
+
+  console.info('[YNABBIT] 0.0.3 loaded');
 
   function findSummaryBreakdown() {
     return document.querySelector('.budget-inspector .ynab-breakdown');
@@ -49,7 +51,10 @@
       if (!template) return;
 
       row = template.cloneNode(true);
-      row.className = ROW_CLASS;
+
+      // Keep YNAB's native row class for layout/styling and add our own marker.
+      // Replacing className here made the injected row lose YNAB's row styles.
+      row.classList.add(ROW_CLASS);
       row.removeAttribute('id');
       row.removeAttribute('aria-describedby');
 
@@ -60,6 +65,7 @@
       labelHost.textContent = LABEL;
       valueHost.replaceChildren(cloneNativeAmount(sourceAmount));
       breakdown.appendChild(row);
+      console.info('[YNABBIT] Added Still Needed to Fund Plan row');
       return;
     }
 
