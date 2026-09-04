@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.3
+// @version      0.0.4
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
@@ -16,8 +16,33 @@
 
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
   const LABEL = 'Still Needed to Fund Plan';
+  const HELLO_ID = 'ynabbit-hello-world';
 
-  console.info('[YNABBIT] 0.0.3 loaded');
+  console.info('[YNABBIT] 0.0.4 loaded');
+
+  function ensureHelloWorld() {
+    if (document.getElementById(HELLO_ID)) return;
+
+    const hello = document.createElement('div');
+    hello.id = HELLO_ID;
+    hello.textContent = 'YNABBIT HELLO WORLD 0.0.4';
+    Object.assign(hello.style, {
+      position: 'fixed',
+      top: '12px',
+      right: '12px',
+      zIndex: '2147483647',
+      padding: '10px 14px',
+      background: '#ffea00',
+      color: '#111',
+      border: '3px solid #111',
+      borderRadius: '8px',
+      font: 'bold 16px/1.2 sans-serif',
+      boxShadow: '0 3px 12px rgba(0,0,0,.35)'
+    });
+
+    document.documentElement.appendChild(hello);
+    console.info('[YNABBIT] Added Hello World badge');
+  }
 
   function findSummaryBreakdown() {
     return document.querySelector('.budget-inspector .ynab-breakdown');
@@ -53,7 +78,6 @@
       row = template.cloneNode(true);
 
       // Keep YNAB's native row class for layout/styling and add our own marker.
-      // Replacing className here made the injected row lose YNAB's row styles.
       row.classList.add(ROW_CLASS);
       row.removeAttribute('id');
       row.removeAttribute('aria-describedby');
@@ -74,8 +98,6 @@
 
     if (!valueHost) return;
 
-    // Only touch the DOM when the displayed Underfunded value actually changed.
-    // This avoids a MutationObserver feedback loop.
     if (
       !currentAmount ||
       currentAmount.textContent !== sourceAmount.textContent ||
@@ -93,13 +115,11 @@
 
     requestAnimationFrame(() => {
       syncScheduled = false;
+      ensureHelloWorld();
       syncStillNeededRow();
     });
   }
 
-  // YNAB is a single-page app and frequently replaces portions of the Plan DOM.
-  // Re-run after relevant mutations so the row survives month changes, navigation,
-  // assignments, theme changes, and inspector re-renders.
   const observer = new MutationObserver(scheduleSync);
   observer.observe(document.documentElement, {
     childList: true,
@@ -110,5 +130,6 @@
   });
 
   window.addEventListener('popstate', scheduleSync);
+  ensureHelloWorld();
   scheduleSync();
 })();
