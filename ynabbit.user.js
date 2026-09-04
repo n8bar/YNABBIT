@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.2.0
+// @version      0.0.2
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
