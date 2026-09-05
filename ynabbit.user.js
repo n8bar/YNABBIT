@@ -6,7 +6,8 @@
 // @author       Nate Barlow
 // @license      MIT
 // @match        https://app.ynab.com/*
-// @grant        none
+// @grant        GM_registerMenuCommand
+// @grant        GM_openInTab
 // @updateURL    https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js
 // @downloadURL  https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js
 // ==/UserScript==
@@ -16,8 +17,14 @@
 
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
   const LABEL = 'Still Needed to Fund Plan';
+  const SCRIPT_URL = 'https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js';
 
   console.info('[YNABBIT] 0.0.5 loaded');
+
+  GM_registerMenuCommand('Check for YNABBIT update now', () => {
+    const cacheBustedUrl = `${SCRIPT_URL}?ynabbit-update=${Date.now()}`;
+    GM_openInTab(cacheBustedUrl, { active: true });
+  });
 
   function findSummaryBreakdown() {
     return document.querySelector('.budget-inspector .ynab-breakdown');
