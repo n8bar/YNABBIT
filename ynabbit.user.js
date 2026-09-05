@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.4
+// @version      0.0.5
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
@@ -17,7 +17,7 @@
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
   const LABEL = 'Still Needed to Fund Plan';
 
-  console.info('[YNABBIT] 0.0.4 loaded');
+  console.info('[YNABBIT] 0.0.5 loaded');
 
   function findSummaryBreakdown() {
     return document.querySelector('.budget-inspector .ynab-breakdown');
