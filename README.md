@@ -1,35 +1,39 @@
 # YNABBIT
 
+## Install YNABBIT
+
+1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.
+2. Make sure Tampermonkey is allowed to run user scripts on `app.ynab.com`.
+3. Open [Install the latest YNABBIT](https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js) and click **Install**.
+4. Reload YNAB.
+
+That install link always points to the latest version on GitHub.
+
 YNABBIT is a small, auditable userscript for adding useful information and enhancements directly to the YNAB web app without rebuilding YNAB's interface.
 
-The first enhancement adds **Still Needed to Fund Plan** to the monthly Summary card.
-
-YNAB already calculates this value as **Underfunded** in the Auto-Assign card. YNABBIT surfaces that same native value in Summary instead of recalculating it or requiring API credentials.
-
-## Install
-
-1. Install Tampermonkey (or another compatible userscript manager).
-2. Open the raw `ynabbit.user.js` file from this repository and install it.
-3. Open or refresh YNAB's Plan view.
-
-Tampermonkey can use the userscript's `@updateURL` and `@downloadURL` metadata to pull future versions directly from this repository.
+The first enhancement adds a **Still Needed to Fund Plan** amount in its own YNABBIT card in the right-side Plan inspector.
 
 ## Security / privacy
 
 YNABBIT is intentionally public and small enough to audit.
 
-Version 0.2.0 does not request API access, does not store credentials, and does not send YNAB data anywhere. It runs only on `https://app.ynab.com/*` and reads/modifies the page DOM in your browser.
+The current version does not request YNAB API access, does not store credentials, and does not send YNAB data anywhere. It runs only on `https://app.ynab.com/*` and reads/modifies the page DOM in your browser.
 
 If future enhancements need the official YNAB API, credential handling and network permissions will be added explicitly and documented here.
 
 ## How the first enhancement works
 
-In YNAB's current Plan UI, the monthly Summary and Auto-Assign cards are both already present in the Budget Inspector. YNABBIT:
+YNABBIT:
 
-1. Reads the native **Underfunded** amount from Auto-Assign.
-2. Clones one of YNAB's existing Summary rows so the injected row inherits YNAB's styling and theme behavior.
-3. Labels the row **Still Needed to Fund Plan**.
-4. Keeps it synchronized when YNAB re-renders the inspector or changes the amount.
+1. Reads each category's current **more needed** amount from the Plan page.
+2. Adds those amounts together.
+3. Subtracts money already sitting in **Ready to Assign**.
+4. Shows the result as **Still Needed to Fund Plan** in the YNABBIT card.
+5. Keeps the amount synchronized as YNAB changes, regardless of category selection.
+
+## Updates
+
+YNABBIT includes `@updateURL` and `@downloadURL` metadata so Tampermonkey can pull future versions directly from this repository.
 
 ## Status
 
