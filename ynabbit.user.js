@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.6.1
+// @version      0.0.6.2
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
 // @match        https://app.ynab.com/*
 // @grant        GM_registerMenuCommand
-// @grant        GM_openInTab
 // @updateURL    https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js
 // @downloadURL  https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js
 // ==/UserScript==
@@ -19,12 +18,16 @@
   const LABEL = 'Still Needed to Fund Plan';
   const SCRIPT_URL = 'https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js';
 
-  console.info('[YNABBIT] 0.0.6.1 loaded');
+  console.info('[YNABBIT] 0.0.6.2 loaded');
 
   GM_registerMenuCommand('Check for YNABBIT update now', () => {
-    const cacheBustedUrl = `${SCRIPT_URL}?ynabbit-update=${Date.now()}`;
-    const installerUrl = `https://www.tampermonkey.net/script_installation.php#url=${cacheBustedUrl}`;
-    GM_openInTab(installerUrl, { active: true });
+    const link = document.createElement('a');
+    link.href = `${SCRIPT_URL}?ynabbit-update=${Date.now()}`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    document.documentElement.appendChild(link);
+    link.click();
+    link.remove();
   });
 
   function findSummaryBreakdown() {
