@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.8
+// @version      0.0.9
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
@@ -18,6 +18,7 @@
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
   const VERSION_CARD_CLASS = 'ynabbit-version-card';
   const CARD_BREAKDOWN_CLASS = 'ynabbit-card-breakdown';
+  const CARD_TITLE_ROW_CLASS = 'ynabbit-card-title-row';
   const UPDATE_BUTTON_CLASS = 'ynabbit-update-button';
   const LABEL = 'Still Needed to Fund Plan';
   const SCRIPT_URL = 'https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js';
@@ -79,14 +80,15 @@
     link.href = SCRIPT_URL;
     link.target = '_blank';
     link.rel = 'noopener';
-    link.textContent = 'Update YNABBIT';
-    link.style.display = 'inline-block';
-    link.style.margin = '0.75rem 1rem 1rem';
-    link.style.padding = '0.5rem 0.75rem';
-    link.style.border = '1px solid currentColor';
-    link.style.borderRadius = '0.375rem';
+    link.textContent = '✔️ 4 updates';
+    link.style.display = 'inline-flex';
+    link.style.alignItems = 'center';
+    link.style.marginLeft = 'auto';
+    link.style.whiteSpace = 'nowrap';
     link.style.textDecoration = 'none';
     link.style.fontWeight = '600';
+    link.style.fontSize = '0.875rem';
+    link.style.lineHeight = '1.25rem';
 
     // Refresh the URL at the moment of the real user click so GitHub/raw caches
     // cannot hand Tampermonkey an older copy of the script.
@@ -101,6 +103,41 @@
     });
 
     return link;
+  }
+
+  function styleCard(card) {
+    card.style.overflow = 'hidden';
+    card.style.marginTop = '1rem';
+
+    const body = card.querySelector('.card-body');
+    if (body) {
+      body.style.padding = '0';
+    }
+
+    const titleRow = card.querySelector(`.${CARD_TITLE_ROW_CLASS}`);
+    if (titleRow) {
+      titleRow.style.display = 'flex';
+      titleRow.style.alignItems = 'center';
+      titleRow.style.justifyContent = 'space-between';
+      titleRow.style.gap = '1rem';
+      titleRow.style.padding = '1.25rem 1.5rem';
+      titleRow.style.borderBottom = '1px solid color-mix(in srgb, currentColor 12%, transparent)';
+    }
+
+    const heading = card.querySelector('h2');
+    if (heading) {
+      heading.style.margin = '0';
+      heading.style.padding = '0';
+      heading.style.fontSize = '1rem';
+      heading.style.lineHeight = '1.5rem';
+      heading.style.fontWeight = '700';
+    }
+
+    const breakdown = card.querySelector(`.${CARD_BREAKDOWN_CLASS}`);
+    if (breakdown) {
+      breakdown.style.padding = '1rem 1.5rem 1.25rem';
+      breakdown.style.margin = '0';
+    }
   }
 
   function syncVersionCard() {
@@ -123,14 +160,18 @@
       body.className = 'card-body';
       body.setAttribute('aria-hidden', 'false');
 
+      const titleRow = document.createElement('div');
+      titleRow.className = CARD_TITLE_ROW_CLASS;
+
       const heading = document.createElement('h2');
       heading.textContent = `YNABBIT v${VERSION}`;
-      heading.style.padding = '1rem 1rem 0';
+
+      titleRow.append(heading, makeUpdateButton());
 
       const breakdown = document.createElement('div');
       breakdown.className = `ynab-breakdown ${CARD_BREAKDOWN_CLASS}`;
 
-      body.append(heading, breakdown, makeUpdateButton());
+      body.append(titleRow, breakdown);
       card.appendChild(body);
       console.info(`[YNABBIT] Added version card for v${VERSION}`);
     } else {
@@ -139,10 +180,28 @@
         heading.textContent = `YNABBIT v${VERSION}`;
       }
 
-      if (!card.querySelector(`.${UPDATE_BUTTON_CLASS}`)) {
-        card.querySelector('.card-body')?.appendChild(makeUpdateButton());
+      let titleRow = card.querySelector(`.${CARD_TITLE_ROW_CLASS}`);
+      if (!titleRow) {
+        titleRow = document.createElement('div');
+        titleRow.className = CARD_TITLE_ROW_CLASS;
+        const body = card.querySelector('.card-body');
+        if (heading && body) {
+          body.insertBefore(titleRow, body.firstChild);
+          titleRow.appendChild(heading);
+        }
+      }
+
+      const oldButton = card.querySelector(`.${UPDATE_BUTTON_CLASS}`);
+      if (oldButton && oldButton.parentElement !== titleRow) {
+        oldButton.remove();
+      }
+
+      if (titleRow && !titleRow.querySelector(`.${UPDATE_BUTTON_CLASS}`)) {
+        titleRow.appendChild(makeUpdateButton());
       }
     }
+
+    styleCard(card);
 
     if (lastNativeCard.nextElementSibling !== card) {
       lastNativeCard.insertAdjacentElement('afterend', card);
@@ -182,18 +241,27 @@
     let row = breakdown.querySelector(`.${ROW_CLASS}`);
 
     if (!row) {
-      // Clone a real Summary row so YNABBIT inherits YNAB's current layout,
-      // typography, spacing, currency formatting, and theme behavior.
+      // Clone a real Summary row so YNABBIT inherits YNAB's current typography,
+      // currency formatting, and theme behavior, then normalize its spacing here.
       row = template.cloneNode(true);
       row.classList.add(ROW_CLASS);
       row.removeAttribute('id');
       row.removeAttribute('aria-describedby');
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = 'minmax(0, 1fr) auto';
+      row.style.alignItems = 'center';
+      row.style.gap = '1rem';
+      row.style.padding = '0';
+      row.style.margin = '0';
+      row.style.borderTop = '0';
 
       const labelHost = row.firstElementChild;
       const valueHost = row.children[1];
       if (!labelHost || !valueHost) return;
 
       labelHost.textContent = LABEL;
+      labelHost.style.minWidth = '0';
+      valueHost.style.textAlign = 'right';
       valueHost.replaceChildren(renderedAmount);
       breakdown.appendChild(row);
       console.info('[YNABBIT] Added Still Needed to Fund Plan row to YNABBIT card');
