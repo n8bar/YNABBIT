@@ -27,7 +27,18 @@
   });
 
   function findSummaryBreakdown() {
-    return document.querySelector('.budget-inspector .ynab-breakdown');
+    // The month-wide Summary contains this native row. Category and
+    // multi-category inspector views do not, so this also acts as our
+    // "no categories selected" check.
+    const assignedRow = document.querySelector(
+      '.budget-inspector .ynab-breakdown-assigned-in-month'
+    );
+
+    return assignedRow?.parentElement || null;
+  }
+
+  function removeInjectedRows() {
+    document.querySelectorAll(`.${ROW_CLASS}`).forEach((row) => row.remove());
   }
 
   function findUnderfundedAmount() {
@@ -71,10 +82,16 @@
 
   function syncStillNeededRow() {
     const breakdown = findSummaryBreakdown();
+
+    if (!breakdown) {
+      removeInjectedRows();
+      return;
+    }
+
     const underfundedAmount = findUnderfundedAmount();
     const readyToAssignAmount = findReadyToAssignAmount();
 
-    if (!breakdown || !underfundedAmount || !readyToAssignAmount) return;
+    if (!underfundedAmount || !readyToAssignAmount) return;
 
     const underfunded = parseCurrencyAmount(underfundedAmount);
     const readyToAssign = parseCurrencyAmount(readyToAssignAmount);
@@ -90,9 +107,7 @@
     if (!row) {
       // Clone a real Summary row so YNABBIT inherits YNAB's current layout,
       // typography, spacing, currency formatting, and theme behavior.
-      const template =
-        breakdown.querySelector('.ynab-breakdown-assigned-in-month') ||
-        breakdown.firstElementChild;
+      const template = breakdown.querySelector('.ynab-breakdown-assigned-in-month');
 
       if (!template) return;
 
