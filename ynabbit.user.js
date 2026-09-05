@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.9
+// @version      0.0.10
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
@@ -83,12 +83,19 @@
     link.textContent = '✔️ 4 updates';
     link.style.display = 'inline-flex';
     link.style.alignItems = 'center';
+    link.style.justifyContent = 'center';
     link.style.marginLeft = 'auto';
+    link.style.height = '1.5rem';
+    link.style.boxSizing = 'border-box';
+    link.style.padding = '0 0.5rem';
+    link.style.border = '1px solid currentColor';
+    link.style.borderRadius = '0.375rem';
     link.style.whiteSpace = 'nowrap';
     link.style.textDecoration = 'none';
     link.style.fontWeight = '600';
-    link.style.fontSize = '0.875rem';
-    link.style.lineHeight = '1.25rem';
+    link.style.fontSize = '0.8125rem';
+    link.style.lineHeight = '1';
+    link.style.cursor = 'pointer';
 
     // Refresh the URL at the moment of the real user click so GitHub/raw caches
     // cannot hand Tampermonkey an older copy of the script.
