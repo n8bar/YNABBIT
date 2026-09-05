@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.6.2
+// @version      0.0.7
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
 // @match        https://app.ynab.com/*
+// @grant        GM_info
 // @grant        GM_registerMenuCommand
 // @updateURL    https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js
 // @downloadURL  https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js
@@ -14,11 +15,13 @@
 (() => {
   'use strict';
 
+  const VERSION = GM_info.script.version;
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
+  const VERSION_CARD_CLASS = 'ynabbit-version-card';
   const LABEL = 'Still Needed to Fund Plan';
   const SCRIPT_URL = 'https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js';
 
-  console.info('[YNABBIT] 0.0.6.2 loaded');
+  console.info(`[YNABBIT] ${VERSION} loaded`);
 
   GM_registerMenuCommand('Check for YNABBIT update now', () => {
     const link = document.createElement('a');
@@ -147,6 +150,45 @@
     }
   }
 
+  function syncVersionCard() {
+    const inspectorContent = document.querySelector('.budget-inspector .budget-inspector-content');
+    if (!inspectorContent) return;
+
+    const nativeCards = [
+      ...inspectorContent.querySelectorAll(`section.card:not(.${VERSION_CARD_CLASS})`)
+    ];
+    const lastNativeCard = nativeCards.at(-1);
+    if (!lastNativeCard) return;
+
+    let card = inspectorContent.querySelector(`.${VERSION_CARD_CLASS}`);
+
+    if (!card) {
+      card = document.createElement('section');
+      card.className = `card ${VERSION_CARD_CLASS}`;
+
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      body.setAttribute('aria-hidden', 'false');
+
+      const heading = document.createElement('h2');
+      heading.textContent = `YNABBIT v${VERSION}`;
+      heading.style.padding = '1rem';
+
+      body.appendChild(heading);
+      card.appendChild(body);
+      console.info(`[YNABBIT] Added version card for v${VERSION}`);
+    } else {
+      const heading = card.querySelector('h2');
+      if (heading && heading.textContent !== `YNABBIT v${VERSION}`) {
+        heading.textContent = `YNABBIT v${VERSION}`;
+      }
+    }
+
+    if (lastNativeCard.nextElementSibling !== card) {
+      lastNativeCard.insertAdjacentElement('afterend', card);
+    }
+  }
+
   let syncScheduled = false;
 
   function scheduleSync() {
@@ -156,6 +198,7 @@
     requestAnimationFrame(() => {
       syncScheduled = false;
       syncStillNeededRow();
+      syncVersionCard();
     });
   }
 
