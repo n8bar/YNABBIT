@@ -2,7 +2,7 @@
 
 ## Install YNABBIT
 
-1. Install [Tampermonkey]([https://www.tampermonkey.net/](https://chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) in your browser.
+1. Install [Tampermonkey](https://www.tampermonkey.net/](https://chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo) in your browser.
 2. Make sure Tampermonkey is allowed to run user scripts on `app.ynab.com`.
 3. Open [Install the latest YNABBIT](https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js) and click **Install**.
 4. Reload YNAB.
