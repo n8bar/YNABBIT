@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.6
+// @version      0.0.6.1
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
@@ -19,7 +19,7 @@
   const LABEL = 'Still Needed to Fund Plan';
   const SCRIPT_URL = 'https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js';
 
-  console.info('[YNABBIT] 0.0.6 loaded');
+  console.info('[YNABBIT] 0.0.6.1 loaded');
 
   GM_registerMenuCommand('Check for YNABBIT update now', () => {
     const cacheBustedUrl = `${SCRIPT_URL}?ynabbit-update=${Date.now()}`;
