@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.10
+// @version      0.0.11
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
@@ -25,35 +25,69 @@
 
   console.info(`[YNABBIT] ${VERSION} loaded`);
 
-  function findNativeSummaryRow() {
-    return [...document.querySelectorAll(
-      '.budget-inspector .ynab-breakdown-assigned-in-month'
-    )].find((row) => !row.closest(`.${VERSION_CARD_CLASS}`)) || null;
-  }
-
-  function removeInjectedRows() {
-    document.querySelectorAll(`.${ROW_CLASS}`).forEach((row) => row.remove());
-  }
-
-  function findUnderfundedAmount() {
-    return document.querySelector(
-      '.budget-inspector .budget-breakdown-auto-assign .budget-inspector-button.underfunded .currency'
-    );
-  }
-
   function findReadyToAssignAmount() {
     return document.querySelector('.budget-header .to-be-budgeted-amount .currency');
   }
 
-  function parseCurrencyAmount(element) {
-    if (!element) return null;
+  function parseCurrencyText(text) {
+    const normalized = text?.trim() || '';
+    if (!normalized) return null;
 
-    const text = element.textContent?.trim() || '';
-    const isNegative = text.includes('-') || (text.includes('(') && text.includes(')'));
-    const numeric = Number.parseFloat(text.replace(/[^0-9.]/g, ''));
+    const isNegative = normalized.includes('-') ||
+      (normalized.includes('(') && normalized.includes(')'));
+    const numeric = Number.parseFloat(normalized.replace(/[^0-9.]/g, ''));
 
     if (!Number.isFinite(numeric)) return null;
     return isNegative ? -numeric : numeric;
+  }
+
+  function parseCurrencyAmount(element) {
+    return element ? parseCurrencyText(element.textContent) : null;
+  }
+
+  function findGlobalUnderfunded() {
+    // Category selection changes the inspector's Underfunded figure, so do not use it.
+    // Instead, read each category's month-wide "more needed" amount from the budget
+    // table, which remains independent of which categories are selected.
+    const categoryRows = [
+      ...document.querySelectorAll('.budget-table .budget-table-row.is-sub-category')
+    ];
+
+    if (!categoryRows.length) return null;
+
+    let total = 0;
+
+    for (const row of categoryRows) {
+      let amount = null;
+
+      // Preferred source: the same "X more needed" text YNAB shows beside a target.
+      const goalStatus = row.querySelector('.budget-table-cell-goal-status');
+      const goalStatusText = goalStatus?.textContent?.trim() || '';
+      const highlightedAmount = goalStatus?.querySelector('.highlighted-message-part');
+
+      if (highlightedAmount && /\bmore needed\b/i.test(goalStatusText)) {
+        amount = parseCurrencyText(highlightedAmount.textContent);
+      }
+
+      // Fallback for target types whose status wording/markup differs.
+      if (amount === null) {
+        const availableButton = row.querySelector(
+          '.budget-table-cell-available .ynab-new-budget-available-number'
+        );
+        const title = availableButton?.getAttribute('title') || '';
+        const match = title.match(/\bAssign\s+([^\s]+)\s+more\b/i);
+
+        if (match) {
+          amount = parseCurrencyText(match[1]);
+        }
+      }
+
+      if (amount !== null && amount > 0) {
+        total += amount;
+      }
+    }
+
+    return total;
   }
 
   function makeNativeAmount(sourceAmount, value) {
@@ -218,58 +252,42 @@
   }
 
   function syncStillNeededRow() {
-    const template = findNativeSummaryRow();
     const card = document.querySelector(`.${VERSION_CARD_CLASS}`);
     const breakdown = card?.querySelector(`.${CARD_BREAKDOWN_CLASS}`);
+    if (!breakdown) return;
 
-    // The native month Summary row only exists when no categories are selected.
-    if (!template || !breakdown) {
-      removeInjectedRows();
-      return;
-    }
-
-    const underfundedAmount = findUnderfundedAmount();
+    const underfunded = findGlobalUnderfunded();
     const readyToAssignAmount = findReadyToAssignAmount();
-
-    if (!underfundedAmount || !readyToAssignAmount) {
-      removeInjectedRows();
-      return;
-    }
-
-    const underfunded = parseCurrencyAmount(underfundedAmount);
     const readyToAssign = parseCurrencyAmount(readyToAssignAmount);
-    if (underfunded === null || readyToAssign === null) return;
+
+    if (underfunded === null || !readyToAssignAmount || readyToAssign === null) return;
 
     // Ready to Assign is money already available to cover the plan, so it reduces
     // how much additional money is still needed. "Still needed" cannot be negative.
     const stillNeeded = Math.max(0, underfunded - readyToAssign);
-    const renderedAmount = makeNativeAmount(underfundedAmount, stillNeeded);
+    const renderedAmount = makeNativeAmount(readyToAssignAmount, stillNeeded);
 
     let row = breakdown.querySelector(`.${ROW_CLASS}`);
 
     if (!row) {
-      // Clone a real Summary row so YNABBIT inherits YNAB's current typography,
-      // currency formatting, and theme behavior, then normalize its spacing here.
-      row = template.cloneNode(true);
-      row.classList.add(ROW_CLASS);
-      row.removeAttribute('id');
-      row.removeAttribute('aria-describedby');
+      row = document.createElement('div');
+      row.className = ROW_CLASS;
       row.style.display = 'grid';
       row.style.gridTemplateColumns = 'minmax(0, 1fr) auto';
       row.style.alignItems = 'center';
       row.style.gap = '1rem';
       row.style.padding = '0';
       row.style.margin = '0';
-      row.style.borderTop = '0';
 
-      const labelHost = row.firstElementChild;
-      const valueHost = row.children[1];
-      if (!labelHost || !valueHost) return;
-
+      const labelHost = document.createElement('div');
       labelHost.textContent = LABEL;
       labelHost.style.minWidth = '0';
+
+      const valueHost = document.createElement('div');
       valueHost.style.textAlign = 'right';
       valueHost.replaceChildren(renderedAmount);
+
+      row.append(labelHost, valueHost);
       breakdown.appendChild(row);
       console.info('[YNABBIT] Added Still Needed to Fund Plan row to YNABBIT card');
       return;
@@ -308,7 +326,7 @@
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['class', 'aria-hidden']
+    attributeFilter: ['class', 'aria-hidden', 'title']
   });
 
   window.addEventListener('popstate', scheduleSync);
