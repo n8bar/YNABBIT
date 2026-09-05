@@ -16,33 +16,8 @@
 
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
   const LABEL = 'Still Needed to Fund Plan';
-  const HELLO_ID = 'ynabbit-hello-world';
 
   console.info('[YNABBIT] 0.0.4 loaded');
-
-  function ensureHelloWorld() {
-    if (document.getElementById(HELLO_ID)) return;
-
-    const hello = document.createElement('div');
-    hello.id = HELLO_ID;
-    hello.textContent = 'YNABBIT HELLO WORLD 0.0.4';
-    Object.assign(hello.style, {
-      position: 'fixed',
-      top: '12px',
-      right: '12px',
-      zIndex: '2147483647',
-      padding: '10px 14px',
-      background: '#ffea00',
-      color: '#111',
-      border: '3px solid #111',
-      borderRadius: '8px',
-      font: 'bold 16px/1.2 sans-serif',
-      boxShadow: '0 3px 12px rgba(0,0,0,.35)'
-    });
-
-    document.documentElement.appendChild(hello);
-    console.info('[YNABBIT] Added Hello World badge');
-  }
 
   function findSummaryBreakdown() {
     return document.querySelector('.budget-inspector .ynab-breakdown');
@@ -115,7 +90,6 @@
 
     requestAnimationFrame(() => {
       syncScheduled = false;
-      ensureHelloWorld();
       syncStillNeededRow();
     });
   }
@@ -130,6 +104,5 @@
   });
 
   window.addEventListener('popstate', scheduleSync);
-  ensureHelloWorld();
   scheduleSync();
 })();
