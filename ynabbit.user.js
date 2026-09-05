@@ -29,15 +29,54 @@
     );
   }
 
-  function cloneNativeAmount(sourceAmount) {
-    return sourceAmount.cloneNode(true);
+  function findReadyToAssignAmount() {
+    return document.querySelector('.budget-header .to-be-budgeted-amount .currency');
+  }
+
+  function parseCurrencyAmount(element) {
+    if (!element) return null;
+
+    const text = element.textContent?.trim() || '';
+    const isNegative = text.includes('-') || (text.includes('(') && text.includes(')'));
+    const numeric = Number.parseFloat(text.replace(/[^0-9.]/g, ''));
+
+    if (!Number.isFinite(numeric)) return null;
+    return isNegative ? -numeric : numeric;
+  }
+
+  function makeNativeAmount(sourceAmount, value) {
+    const clone = sourceAmount.cloneNode(true);
+    const symbol = clone.querySelector('bdi')?.textContent || '$';
+    const formatted = value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    clone.classList.remove('positive', 'negative', 'zero');
+    clone.classList.add(value > 0 ? 'positive' : value < 0 ? 'negative' : 'zero');
+
+    const symbolNode = document.createElement('bdi');
+    symbolNode.textContent = symbol;
+    clone.replaceChildren(symbolNode, document.createTextNode(formatted));
+
+    return clone;
   }
 
   function syncStillNeededRow() {
     const breakdown = findSummaryBreakdown();
-    const sourceAmount = findUnderfundedAmount();
+    const underfundedAmount = findUnderfundedAmount();
+    const readyToAssignAmount = findReadyToAssignAmount();
 
-    if (!breakdown || !sourceAmount) return;
+    if (!breakdown || !underfundedAmount || !readyToAssignAmount) return;
+
+    const underfunded = parseCurrencyAmount(underfundedAmount);
+    const readyToAssign = parseCurrencyAmount(readyToAssignAmount);
+    if (underfunded === null || readyToAssign === null) return;
+
+    // Ready to Assign is money already available to cover the plan, so it reduces
+    // how much additional money is still needed. "Still needed" cannot be negative.
+    const stillNeeded = Math.max(0, underfunded - readyToAssign);
+    const renderedAmount = makeNativeAmount(underfundedAmount, stillNeeded);
 
     let row = breakdown.querySelector(`.${ROW_CLASS}`);
 
@@ -62,7 +101,7 @@
       if (!labelHost || !valueHost) return;
 
       labelHost.textContent = LABEL;
-      valueHost.replaceChildren(cloneNativeAmount(sourceAmount));
+      valueHost.replaceChildren(renderedAmount);
       breakdown.appendChild(row);
       console.info('[YNABBIT] Added Still Needed to Fund Plan row');
       return;
@@ -75,10 +114,10 @@
 
     if (
       !currentAmount ||
-      currentAmount.textContent !== sourceAmount.textContent ||
-      currentAmount.className !== sourceAmount.className
+      currentAmount.textContent !== renderedAmount.textContent ||
+      currentAmount.className !== renderedAmount.className
     ) {
-      valueHost.replaceChildren(cloneNativeAmount(sourceAmount));
+      valueHost.replaceChildren(renderedAmount);
     }
   }
 
