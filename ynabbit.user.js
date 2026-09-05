@@ -7,7 +7,6 @@
 // @license      MIT
 // @match        https://app.ynab.com/*
 // @grant        GM_info
-// @grant        GM_registerMenuCommand
 // @updateURL    https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js
 // @downloadURL  https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js
 // ==/UserScript==
@@ -19,20 +18,11 @@
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
   const VERSION_CARD_CLASS = 'ynabbit-version-card';
   const CARD_BREAKDOWN_CLASS = 'ynabbit-card-breakdown';
+  const UPDATE_BUTTON_CLASS = 'ynabbit-update-button';
   const LABEL = 'Still Needed to Fund Plan';
   const SCRIPT_URL = 'https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js';
 
   console.info(`[YNABBIT] ${VERSION} loaded`);
-
-  GM_registerMenuCommand('Check for YNABBIT update now', () => {
-    const link = document.createElement('a');
-    link.href = `${SCRIPT_URL}?ynabbit-update=${Date.now()}`;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    document.documentElement.appendChild(link);
-    link.click();
-    link.remove();
-  });
 
   function findNativeSummaryRow() {
     return [...document.querySelectorAll(
@@ -83,6 +73,36 @@
     return clone;
   }
 
+  function makeUpdateButton() {
+    const link = document.createElement('a');
+    link.className = UPDATE_BUTTON_CLASS;
+    link.href = SCRIPT_URL;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = 'Update YNABBIT';
+    link.style.display = 'inline-block';
+    link.style.margin = '0.75rem 1rem 1rem';
+    link.style.padding = '0.5rem 0.75rem';
+    link.style.border = '1px solid currentColor';
+    link.style.borderRadius = '0.375rem';
+    link.style.textDecoration = 'none';
+    link.style.fontWeight = '600';
+
+    // Refresh the URL at the moment of the real user click so GitHub/raw caches
+    // cannot hand Tampermonkey an older copy of the script.
+    link.addEventListener('pointerdown', () => {
+      link.href = `${SCRIPT_URL}?ynabbit-update=${Date.now()}`;
+    });
+
+    link.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        link.href = `${SCRIPT_URL}?ynabbit-update=${Date.now()}`;
+      }
+    });
+
+    return link;
+  }
+
   function syncVersionCard() {
     const inspectorContent = document.querySelector('.budget-inspector .budget-inspector-content');
     if (!inspectorContent) return null;
@@ -110,13 +130,17 @@
       const breakdown = document.createElement('div');
       breakdown.className = `ynab-breakdown ${CARD_BREAKDOWN_CLASS}`;
 
-      body.append(heading, breakdown);
+      body.append(heading, breakdown, makeUpdateButton());
       card.appendChild(body);
       console.info(`[YNABBIT] Added version card for v${VERSION}`);
     } else {
       const heading = card.querySelector('h2');
       if (heading && heading.textContent !== `YNABBIT v${VERSION}`) {
         heading.textContent = `YNABBIT v${VERSION}`;
+      }
+
+      if (!card.querySelector(`.${UPDATE_BUTTON_CLASS}`)) {
+        card.querySelector('.card-body')?.appendChild(makeUpdateButton());
       }
     }
 
