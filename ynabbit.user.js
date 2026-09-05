@@ -23,7 +23,8 @@
 
   GM_registerMenuCommand('Check for YNABBIT update now', () => {
     const cacheBustedUrl = `${SCRIPT_URL}?ynabbit-update=${Date.now()}`;
-    GM_openInTab(cacheBustedUrl, { active: true });
+    const installerUrl = `https://www.tampermonkey.net/script_installation.php#url=${cacheBustedUrl}`;
+    GM_openInTab(installerUrl, { active: true });
   });
 
   function findSummaryBreakdown() {
