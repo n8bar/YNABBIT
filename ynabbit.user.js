@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YNABBIT
 // @namespace    https://github.com/n8bar/YNABBIT
-// @version      0.0.7
+// @version      0.0.8
 // @description  Small, auditable enhancements for the YNAB web app.
 // @author       Nate Barlow
 // @license      MIT
@@ -18,6 +18,7 @@
   const VERSION = GM_info.script.version;
   const ROW_CLASS = 'ynabbit-still-needed-to-fund-plan';
   const VERSION_CARD_CLASS = 'ynabbit-version-card';
+  const CARD_BREAKDOWN_CLASS = 'ynabbit-card-breakdown';
   const LABEL = 'Still Needed to Fund Plan';
   const SCRIPT_URL = 'https://raw.githubusercontent.com/n8bar/YNABBIT/main/ynabbit.user.js';
 
@@ -33,15 +34,10 @@
     link.remove();
   });
 
-  function findSummaryBreakdown() {
-    // The month-wide Summary contains this native row. Category and
-    // multi-category inspector views do not, so this also acts as our
-    // "no categories selected" check.
-    const assignedRow = document.querySelector(
+  function findNativeSummaryRow() {
+    return [...document.querySelectorAll(
       '.budget-inspector .ynab-breakdown-assigned-in-month'
-    );
-
-    return assignedRow?.parentElement || null;
+    )].find((row) => !row.closest(`.${VERSION_CARD_CLASS}`)) || null;
   }
 
   function removeInjectedRows() {
@@ -87,10 +83,57 @@
     return clone;
   }
 
-  function syncStillNeededRow() {
-    const breakdown = findSummaryBreakdown();
+  function syncVersionCard() {
+    const inspectorContent = document.querySelector('.budget-inspector .budget-inspector-content');
+    if (!inspectorContent) return null;
 
-    if (!breakdown) {
+    const nativeCards = [
+      ...inspectorContent.querySelectorAll(`section.card:not(.${VERSION_CARD_CLASS})`)
+    ];
+    const lastNativeCard = nativeCards.at(-1);
+    if (!lastNativeCard) return null;
+
+    let card = inspectorContent.querySelector(`.${VERSION_CARD_CLASS}`);
+
+    if (!card) {
+      card = document.createElement('section');
+      card.className = `card ${VERSION_CARD_CLASS}`;
+
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      body.setAttribute('aria-hidden', 'false');
+
+      const heading = document.createElement('h2');
+      heading.textContent = `YNABBIT v${VERSION}`;
+      heading.style.padding = '1rem 1rem 0';
+
+      const breakdown = document.createElement('div');
+      breakdown.className = `ynab-breakdown ${CARD_BREAKDOWN_CLASS}`;
+
+      body.append(heading, breakdown);
+      card.appendChild(body);
+      console.info(`[YNABBIT] Added version card for v${VERSION}`);
+    } else {
+      const heading = card.querySelector('h2');
+      if (heading && heading.textContent !== `YNABBIT v${VERSION}`) {
+        heading.textContent = `YNABBIT v${VERSION}`;
+      }
+    }
+
+    if (lastNativeCard.nextElementSibling !== card) {
+      lastNativeCard.insertAdjacentElement('afterend', card);
+    }
+
+    return card;
+  }
+
+  function syncStillNeededRow() {
+    const template = findNativeSummaryRow();
+    const card = document.querySelector(`.${VERSION_CARD_CLASS}`);
+    const breakdown = card?.querySelector(`.${CARD_BREAKDOWN_CLASS}`);
+
+    // The native month Summary row only exists when no categories are selected.
+    if (!template || !breakdown) {
       removeInjectedRows();
       return;
     }
@@ -98,7 +141,10 @@
     const underfundedAmount = findUnderfundedAmount();
     const readyToAssignAmount = findReadyToAssignAmount();
 
-    if (!underfundedAmount || !readyToAssignAmount) return;
+    if (!underfundedAmount || !readyToAssignAmount) {
+      removeInjectedRows();
+      return;
+    }
 
     const underfunded = parseCurrencyAmount(underfundedAmount);
     const readyToAssign = parseCurrencyAmount(readyToAssignAmount);
@@ -114,13 +160,7 @@
     if (!row) {
       // Clone a real Summary row so YNABBIT inherits YNAB's current layout,
       // typography, spacing, currency formatting, and theme behavior.
-      const template = breakdown.querySelector('.ynab-breakdown-assigned-in-month');
-
-      if (!template) return;
-
       row = template.cloneNode(true);
-
-      // Keep YNAB's native row class for layout/styling and add our own marker.
       row.classList.add(ROW_CLASS);
       row.removeAttribute('id');
       row.removeAttribute('aria-describedby');
@@ -132,7 +172,7 @@
       labelHost.textContent = LABEL;
       valueHost.replaceChildren(renderedAmount);
       breakdown.appendChild(row);
-      console.info('[YNABBIT] Added Still Needed to Fund Plan row');
+      console.info('[YNABBIT] Added Still Needed to Fund Plan row to YNABBIT card');
       return;
     }
 
@@ -150,45 +190,6 @@
     }
   }
 
-  function syncVersionCard() {
-    const inspectorContent = document.querySelector('.budget-inspector .budget-inspector-content');
-    if (!inspectorContent) return;
-
-    const nativeCards = [
-      ...inspectorContent.querySelectorAll(`section.card:not(.${VERSION_CARD_CLASS})`)
-    ];
-    const lastNativeCard = nativeCards.at(-1);
-    if (!lastNativeCard) return;
-
-    let card = inspectorContent.querySelector(`.${VERSION_CARD_CLASS}`);
-
-    if (!card) {
-      card = document.createElement('section');
-      card.className = `card ${VERSION_CARD_CLASS}`;
-
-      const body = document.createElement('div');
-      body.className = 'card-body';
-      body.setAttribute('aria-hidden', 'false');
-
-      const heading = document.createElement('h2');
-      heading.textContent = `YNABBIT v${VERSION}`;
-      heading.style.padding = '1rem';
-
-      body.appendChild(heading);
-      card.appendChild(body);
-      console.info(`[YNABBIT] Added version card for v${VERSION}`);
-    } else {
-      const heading = card.querySelector('h2');
-      if (heading && heading.textContent !== `YNABBIT v${VERSION}`) {
-        heading.textContent = `YNABBIT v${VERSION}`;
-      }
-    }
-
-    if (lastNativeCard.nextElementSibling !== card) {
-      lastNativeCard.insertAdjacentElement('afterend', card);
-    }
-  }
-
   let syncScheduled = false;
 
   function scheduleSync() {
@@ -197,8 +198,8 @@
 
     requestAnimationFrame(() => {
       syncScheduled = false;
-      syncStillNeededRow();
       syncVersionCard();
+      syncStillNeededRow();
     });
   }
 
